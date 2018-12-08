@@ -1,0 +1,613 @@
+var xdragState = null;
+var xDragger = (function() {
+    //---simplify this -- no need for function(){return...}
+    return {
+        startDrag: function startDrag(event, x, y, touch, followups) {
+           rforeach(followups, function(e) {
+               window.addEventListener(e, doDrag);
+           });
+           var scaleEnds = getScaleEnds();
+           var target = event.target;
+           var pointer = null, partner = null;
+           if (target == pointermin || target == scalemin) {
+               pointer = pointermin;
+               partner = scalemin;
+           } else if (target == pointermax || target == scalemax) {
+               pointer = pointermax
+               partner = scalemax;
+           } else if (target == pointerset || target == scaleset) {
+               pointer = pointerset;
+               partner = scaleset;
+           }
+           if (!pointer) {
+               phonehome("target not pointer");
+               return;
+           }
+           var passengers = [];
+           if (pointer == pointermin || pointer == pointermax) {
+               passengers.push(pointerset, scaleset);
+           };
+           dragState = {
+               pointer: pointer, partner: partner, passengers: passengers,
+               touch: touch,
+               // mouse position
+               initMX: x, initMY: y,
+               // pointer position
+               initVX: event.target.offsetLeft, initVY: event.target.offsetTop,
+               scaleLeft: scaleEnds[0], scaleRight: scaleEnds[1]
+           };
+       },
+       doMove: function doMove(event, x, y) {
+            var pointer = dragState.pointer;
+            var val = pointerValAtX(x);
+            var textval = round3(val);
+            placeOnScale(pointer, val);
+            var partner = dragState.partner;
+            placeOnScale(partner, val);
+            partner.innerText = textval;
+            var passengers = dragState.passengers;
+            if (passengers.length) {
+                rforeach(passengers, function(p) { placeOnScale(p, val); });
+                passengers[1].innerText = textval;
+            }
+            // record locally and tell the server
+            var i = Number(selectedIdent);
+            calibrationData[i].set = val;
+            sendCalPoint(selectedIdent, "set", val);
+       },
+       endDrag: function endDrag(event, x, y) {
+            var pointer = dragState.pointer;
+            var val = pointerValAtX(x);
+            var i = Number(selectedIdent);
+            // record locally and tell the server
+            if (pointer == pointermin) {
+                calibrationData[i].min = val;
+                sendCalPoint(selectedIdent, "min", val);
+            } else if (pointer == pointermax) {
+                calibrationData[i].max = val;
+                sendCalPoint(selectedIdent, "max", val);
+            } else if (pointer == pointerset) {
+                calibrationData[i].set = val;
+                sendCalPoint(selectedIdent, "set", val);
+            }
+            Dragger.remove();
+       },
+       touchXY: function touchXY(event) {
+            var touch;
+            for (var i = 0; i < event.changedTouches.length; i++) {
+                var t = event.changedTouches[i];
+                if (t.identifier === dragState.touch) {
+                    touch = t;
+                    break;
+                }
+            }
+            if (touch) {
+                return [touch.pageX, touch.pageY];
+            } else return null;
+        },
+       remove: function remove() {
+            rforeach("mousemove mouseup touchmove touchend touchcancel".split(" "), function(e) {
+                window.removeEventListener(e, doDrag);
+            });
+            dragState = null;
+       },
+    };
+})();
+
+function xdoDrag(event) {
+    event.preventDefault();
+    switch (event.type) {
+        case "mousedown":
+            Dragger.startDrag(event, event.clientX, event.clientY, 0, ["mousemove", "mouseup"]);
+            break;
+        case "touchstart":
+            var touch = event.changedTouches[0];
+            var x = touch.pageX, y = touch.pageY;
+            Dragger.startDrag(event, x, y, touch.identifier, ["touchmove", "touchend", "touchcancel"]);
+            break;
+        case "mousemove":
+            Dragger.doMove(event, event.clientX, event.clientY);
+            break;
+        case "touchmove":
+            var xy = Dragger.touchXY(event);
+            if (xy) {
+                Dragger.doMove(event, xy[0], xy[1]);
+            }
+            break;
+        case "mouseup":
+            Dragger.endDrag(event, event.clientX, event.clientY);
+            break;
+        case "touchend":
+        case "touchcancel":
+            phonehome("doDrag '" + event.type + "'");
+            var xy = Dragger.touchXY(event);
+            if (xy) {
+                Dragger.endDrag(event, xy[0], xy[1]);
+            }
+            Dragger.remove();
+            break;
+        default:
+            console.log("unhandled evt", event);
+            break;
+    }
+}
+
+----------------------------
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   <title>Servo calibration</title>
+
+   <style>
+#errors {
+    color: red;
+}
+#idents {
+    /*border: 1px solid black;*/
+}
+#idents label {
+    left-margin: 0.5em;
+}
+
+.scaleBlock {
+   /* border: 1px solid black;*/
+    height: 8em;        /*85px;*/
+    width: 97%;
+    position: relative;
+}
+
+.scaleNumber {
+    background: pink;
+    position: absolute;
+    width: 4m;
+    text-align: center;
+}
+
+.pointer {
+    position: absolute;
+    width: 32px;
+}
+
+#scale {
+    background-color: rgb(125, 202, 255);
+    width: calc(100% - 16em);
+    height: 10px;
+    margin-left: 5em;
+    margin-right: 5em;
+    margin-top: 42px;
+}
+
+.hstack {
+    display: flex;
+    flex-direction: row;
+}
+
+   </style>
+
+   <script id="calibration" language="not-js">%CALIBRATION%</script>
+   <script src="drag.js"></script>
+   <script src="rezoom.js"></script>
+   <script>
+'use strict';
+
+function sendCalPoint(index, part, setting) {
+    if (!isNaN(setting)) setting = round3(setting);
+    var urlbase = "/calpoint";
+    var url = [urlbase, index, part, setting].join("/");
+    sendAjaxGet(url);
+}
+
+function phonehome(text) {
+    var url = "/phonehome/?" + encodeURI(text);
+    sendAjaxGet(url);
+}
+
+function sendAjaxGet(url, okfn, errfn) {
+    var errors = document.getElementById("errors");
+    errors.innerText = "";
+    if (!errfn) errfn = ajaxErrFn;
+    var loadedfn = function loadedfn(evt) {
+        if (evt.target.status !== 0 && evt.target.status !== 200) {
+            errfn(evt);
+        } else if (okfn) okfn(evt);
+    };
+    var req = new XMLHttpRequest();
+    req.responseType = "text";
+    req.open("GET", url);
+    req.addEventListener("load", loadedfn);
+    req.addEventListener("error", errfn);
+    req.addEventListener("abort", errfn);
+    req.send();
+}
+
+function ajaxErrFn(evt) {
+    var errors = document.getElementById("errors");
+    console.log("ajax error", evt.target);
+    errors.innerText = "Trouble contacting server";
+}
+
+function loadIdents() {
+    var stuff = [];
+    var cell = function(i) {
+        var id = "id" + i;
+        var sel = (i == 0)? "checked" : "";
+        var item = "<td><label for='ID'><input type='radio' name='ident' id='ID' SEL>NUM</label></td>".
+                replace(/ID/g, id).
+                replace(/NUM/g, i).
+                replace(/SEL/g, sel);
+        return item;
+    };
+    stuff.push("<table>");
+    for (var k = 0; k < 16; k += 8) {
+        stuff.push("<tr>");
+        for (var i = 0; i < 8; i++) {
+            stuff.push(cell(k + i));
+        }
+        stuff.push("</tr>");
+    }
+    stuff.push("</table>");
+    var idents = document.getElementById("idents");
+    idents.innerHTML = stuff.join("\n");
+    rforeach(idents.getElementsByTagName("input"), function(elt) {
+        elt.addEventListener("click", identClick);
+    });
+}
+
+function initDragHandlers() {
+    rforeach(["pointer", "scaleNumber"], function(cls) {
+        rforeach(document.getElementsByClassName(cls), function(elt) {
+            elt.addEventListener("mousedown", startDrag);
+            elt.addEventListener("touchstart", startDrag);
+        });
+    });
+}
+
+var STATE = {
+    calibrationData: null,
+    selectedIdent: null,
+    scaleMaxEnd: 0.2,
+    dragState: null
+};
+
+function initCalibration() {
+    var okfn = function(evt) {
+        var data = evt.target.responseText;
+        STATE.calibrationData = JSON.parse(data);
+        identClickN(0);
+    };
+    sendAjaxGet("/caldata", okfn);
+}
+
+function identClick(evt) {
+    identClickN(evt.target.id.replace(/^id/, ""));
+}
+
+function identClickN(n) {
+    STATE.selectedIdent = n;
+    var index = Number(STATE.selectedIdent);
+    var dat = STATE.calibrationData[index];
+    var parts = getGuiParts()
+    setPointerData(parts, dat);
+    var newend = (dat.thing == "servo")? 0.2 : 1;
+    setScaleMaxEnd(getGuiParts(), newend);
+}
+
+function clickThingControlled(event) {
+    var index = Number(STATE.selectedIdent);
+    var parts = getGuiParts();
+    var thing, end;
+    if (parts.thingControlledServo.checked) {
+        thing = "servo";
+        end = 0.2;
+    } else if (parts.thingControlledLED.checked) {
+        thing = "led";
+        end = 1.0;
+    }
+    sendCalPoint(index, "thing", thing);
+    setScaleMaxEnd(parts, end);
+    STATE.calibrationData[index].thing = thing;
+}
+
+function clickDirectionInverted(event) {
+    var directionInverted = document.getElementById("directionInverted");
+    var index = Number(STATE.selectedIdent);
+    var inverted = directionInverted.checked? 1 : 0;
+    sendCalPoint(index, "inverted", inverted);
+    STATE.calibrationData[index].inverted = inverted;
+}
+
+function setScaleMaxEnd(parts, newend) {
+    if (newend == STATE.scaleMaxEnd) return;
+    STATE.scaleMaxEnd = newend;
+    // reposition scale sliders
+    var index = Number(STATE.selectedIdent);
+    var place = function(val, item1, item2) {
+        placeOnScale(parts, STATE.dragState, item1, val);
+        placeOnScale(parts, STATE.dragState, item2, val);
+        item2.innerText = round3(val);
+    };
+    var dat = STATE.calibrationData[index];
+    rforeach(["min", "max", "set"], function(x) {
+        dat[x] = Math.min(dat[x], STATE.scaleMaxEnd);
+    });
+    place(dat.min, parts.pointermin, parts.scalemin);
+    place(dat.max, parts.pointermax, parts.scalemax);
+    place(dat.set, parts.pointerset, parts.scaleset);
+}
+
+var onDragFunctions = {
+    onstart: function onStart(target, x, y) {
+                 var parts = getGuiParts();
+                 var pointer = null, partner = null;
+                 var scaleEnds = getScaleEnds(parts);
+                 if (target == parts.pointermin || target == parts.scalemin) {
+                     pointer = parts.pointermin;
+                     partner = parts.scalemin;
+                 } else if (target == parts.pointermax || target == parts.scalemax) {
+                     pointer = parts.pointermax;
+                     partner = parts.scalemax;
+                 } else if (target == parts.pointerset || target == parts.scaleset) {
+                     pointer = parts.pointerset;
+                     partner = parts.scaleset;
+                 }
+                 if (!pointer) {
+                     phonehome("target not pointer");
+                     return;
+                 }
+                 var passengers = [];
+                 if (pointer == parts.pointermin || pointer == parts.pointermax) {
+                     passengers.push(parts.pointerset, parts.scaleset);
+                 };
+
+                 STATE.dragState = {
+                     pointer: pointer, partner: partner, passengers: passengers,
+                     // mouse position
+                     initMX: x, initMY: y,
+                     // pointer position
+                     initVX: target.offsetLeft, initVY: target.offsetTop,
+                     scaleLeft: scaleEnds[0], scaleRight: scaleEnds[1]
+                 };
+             },
+    onmove: function onMove(target, x, y) {
+                 var parts = getGuiParts();
+                 var ds = STATE.dragState;
+                 var pointer = ds.pointer;
+                 var val = pointerValAtX(parts, ds, x);
+                 var textval = round3(val);
+                 placeOnScale(parts, ds, pointer, val);
+                 var partner = ds.partner;
+                 placeOnScale(parts, ds, partner, val);
+                 partner.innerText = textval;
+                 var passengers = ds.passengers;
+                 if (passengers.length) {
+                     rforeach(passengers, function(p) { placeOnScale(parts, ds, p, val); });
+                     passengers[1].innerText = textval;
+                 }
+                 // record locally and tell the server
+                 var i = Number(STATE.selectedIdent);
+                 STATE.calibrationData[i].set = val;
+                 sendCalPoint(STATE.selectedIdent, "set", val);
+             },
+
+    onend: function onEnd(target, x, y) {
+                 var parts = getGuiParts();
+                 var ds = STATE.dragState;
+                 var pointer = ds.pointer;
+                 var val = pointerValAtX(parts, ds, x);
+                 var i = Number(STATE.selectedIdent);
+                 var dat = STATE.calibrationData[i];
+                 // record locally and tell the server
+                 if (pointer == parts.pointermin) {
+                     dat.min = val;
+                     sendCalPoint(STATE.selectedIdent, "min", val);
+                 } else if (pointer == parts.pointermax) {
+                     dat.max = val;
+                     sendCalPoint(STATE.selectedIdent, "max", val);
+                 } else if (pointer == parts.pointerset) {
+                     dat.set = val;
+                     sendCalPoint(STATE.selectedIdent, "set", val);
+                 }
+                 STATE.dragState = null;
+             }
+};
+
+function pointerValAtX(parts, ds, x) {
+    var pointer = ds.pointer;
+    var dx = x - ds.initMX;
+    var newVX = ds.initVX + dx;
+    var val = valueFromScalePlace(ds, pointer, newVX);
+    // limit motion
+    var tooClose = 0.05;
+    if (pointer == parts.pointermin) {
+        var maxval = valueFromScalePlace(ds, parts.pointermax, parts.pointermax.offsetLeft);
+        val = limitBetween(val, 0, maxval - tooClose);
+    } else if (pointer == parts.pointermax) {
+        var minval = valueFromScalePlace(ds, parts.pointermin, parts.pointermin.offsetLeft);
+        val = limitBetween(val, minval + tooClose, STATE.scaleMaxEnd);
+    } else if (pointer == parts.pointerset) {
+        var minval = valueFromScalePlace(ds, parts.pointermin, parts.pointermin.offsetLeft);
+        var maxval = valueFromScalePlace(ds, parts.pointermax, parts.pointermax.offsetLeft);
+        val = limitBetween(val, minval, maxval);
+    }
+    return val;
+}
+
+function unpx (meas) { return Number(meas.replace(/px$/, "")); };
+
+function getScaleEnds(parts) {
+    var scaleStyle = getComputedStyle(parts.scale);
+    var leftPart =  unpx(scaleStyle.paddingLeft);     // + unpx(scaleStyle.marginLeft)
+    var rightPart = 0;  // unpx(scaleStyle.marginRight) + unpx(scaleStyle.paddingRight);
+    var scaleLeft = parts.scale.offsetLeft + leftPart;
+    var scaleRight = parts.scale.offsetLeft + parts.scale.offsetWidth - rightPart;
+    return [scaleLeft, scaleRight];
+}
+
+function setPointerData(parts, dat) {
+    var ds = STATE.dragState;
+    var setone = function (pointer, partner, val) {
+        placeOnScale(parts, ds, pointer, val);
+        placeOnScale(parts, ds, partner, val);
+        partner.innerText = round3(val);
+    };
+    setone(parts.pointermin, parts.scalemin, dat.min);
+    setone(parts.pointermax, parts.scalemax, dat.max);
+    setone(parts.pointerset, parts.scaleset, dat.set);
+
+    switch (dat.thing) {
+        case "servo":
+            parts.thingControlledServo.checked = true;
+            parts.thingControlledLED.checked = false;
+            break;
+        case "led":
+            parts.thingControlledServo.checked = false;
+            parts.thingControlledLED.checked = true;
+            break;
+    }
+    parts.directionInverted.checked = !!dat.inverted;
+}
+
+function valueFromScalePlace(ds, item, left) {
+    var width = item.offsetWidth;
+    var ctr = left + width/2;
+    var value = lerp(ctr, ds.scaleLeft, ds.scaleRight, 0, STATE.scaleMaxEnd);
+    return value;
+}
+
+function placeOnScale(parts, ds, item, frac) {
+    var scaleLeft, scaleRight;
+    if (ds) {
+        scaleLeft = ds.scaleLeft;
+        scaleRight = ds.scaleRight;
+    } else {
+        var scaleEnds = getScaleEnds(parts);
+        scaleLeft = scaleEnds[0];
+        scaleRight = scaleEnds[1];
+    }
+    var ctr = lerp(frac, 0, STATE.scaleMaxEnd, scaleLeft, scaleRight);
+    var width = item.offsetWidth;
+    var left = ctr - width/2;
+    var left = round2(left);
+    item.style.left = left + "px";
+}
+
+function lerp(x, x0, x1, y0, y1) {
+    var frac = (x - x0) / (x1 - x0);
+    var y =  y0 + frac * (y1 - y0);
+    //console.log(`lerp x ${x} x0 ${x0} x1 ${x1} y0 ${y0} y1 ${y1} ==> ${y}`);
+    return y;
+}
+
+function limitBetween(x, x0, x1) {
+    x = Math.max(x0, x);
+    x = Math.min(x1, x);
+    return x;
+}
+
+function round2(x) { return Math.round(100 * x) / 100; }
+function round3(x) { return Math.round(1000 * x) / 1000; }
+
+var cachedGuiParts = null;
+function getGuiParts() {
+    if (!cachedGuiParts) {
+        var parts = {}
+        var names = "scalemin scalemax pointermin pointermax scale scaleset pointerset thingControlledServo thingControlledLED directionInverted";
+        rforeach(names.split(" "), function(id) {
+            parts[id] = document.getElementById(id);
+        });
+        cachedGuiParts = parts;
+    }
+    return cachedGuiParts;
+}
+
+function startDrag(evt) {
+    doDrag(evt, onDragFunctions);
+}
+
+// ****************************************
+
+function rforeach(seq, fn) {
+    var i1, n = seq.length;
+    for (i1 = 0; i1 < n; i1 += 1) {
+        fn(seq[i1]);
+    }
+}
+
+function rmap(seq, fn) {
+    var i2, n = seq.length;
+    var res = [], val;
+    for (i2 = 0; i2 < n; i2++) {
+        val = fn(seq[i2]);
+        res.push(val);
+    }
+    return res;
+}
+
+function rcontains(seq, item) {
+    var i3, n = seq.length;
+    for (i3 = 0; i3 < n; i3 += 1) {
+        if (seq[i3] === item) {
+            return true;
+        }
+    }
+    return false;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    'use strict';
+    loadIdents();
+    initDragHandlers();
+    initCalibration();
+});
+   </script>
+</head>
+<body>
+<h1>Servo calibration</h1>
+<a href="/"><i>Back to Command Central</i></a><p>
+<div id="errors""></div>
+
+<fieldset>
+   <legend>Servo channel</legend>
+   <div id="idents"></div>
+</fieldset>
+
+<p>
+<div class="hstack">
+   <fieldset>
+      <legend>Thing controlled</legend>
+      <label for="thingControlledServo">
+         <input type="radio" name="thingControlled" id="thingControlledServo" checked
+                onclick="clickThingControlled(event)">
+         Servo
+      </label>
+      <label for="thingControlledLED">
+         <input type="radio" name="thingControlled" id="thingControlledLED"
+                onclick="clickThingControlled(event)">
+         LED/Motor
+      </label>
+   </fieldset>
+
+   <fieldset>
+      <legend>Direction</legend>
+      <label for="directionInverted">
+         <input type="checkbox" name="directionInverted" id="directionInverted"
+                onclick="clickDirectionInverted(event)">
+         Inverted
+      </label>
+   </fieldset>
+</div>
+<p>
+
+<fieldset class="scaleBlock">
+   <legend>Set points</legend>
+   <div id="scalemin" class="scaleNumber" style="left: 0; top: 0px;">0.123</div>
+   <div id="scalemax" class="scaleNumber" style="left: 256px; top: 0px;">0.831</div>
+   <img id="pointermin" class="pointer" style="left: 122px; top: 1em" src="point-down.gif">
+   <img id="pointermax" class="pointer" style="left: 300px; top: 1em" src="point-down.gif">
+   <div id="scale"></div>
+   <div id="scaleset" class="scaleNumber" style="left: 128px; top: 5.6em;">0.500</div>
+   <img id="pointerset" class="pointer" style="left: 200px; top: 58px;" src="point-up.gif">
+</fieldset>
+
+</body></html>

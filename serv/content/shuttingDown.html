@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   <title>Shutting down</title>
+
+   <style>
+.hidden {
+    display: none;
+}
+
+#errors {
+  color: red;
+}
+
+   </style>
+   <script>
+
+var totalSecs = 15;
+
+function runDownTheClock() {
+    var secsToGo = totalSecs;
+    var id = 0;
+    togo.max = totalSecs;
+    var tick = function tick() {
+        numsecs.innerText = secsToGo;
+        togo.value = totalSecs - secsToGo;
+        if (!secsToGo) {
+            clearInterval(id);
+            itIsDone();
+        } else {
+            secsToGo -= 1;
+        }
+    };
+    id = setInterval(tick, 1000);
+    tick();
+}
+
+function itIsDone() {
+    whileShuttingDown.classList.add("hidden");
+    doneShuttingDown.classList.remove("hidden");
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    runDownTheClock();
+});
+
+   </script>
+</head>
+<body>
+
+<h1>Shutting down</h1>
+<div id="errors""></div>
+
+<div id="whileShuttingDown">
+<span id="numsecs">75</span> seconds to shutdown.
+<p>
+
+<label for="togo">Tick tick tick:</label>
+<progress id="togo" name="togo"
+          max="75" value="0">
+</progress>
+
+</div>
+<div id="doneShuttingDown" class="hidden">
+   It is OK to switch off the Raspberry Pi now!
+</div>
+
+</body></html>

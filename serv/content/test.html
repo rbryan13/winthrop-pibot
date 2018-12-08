@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   <title>Test page</title>
+   <script src="rezoom.js"></script>
+   <script>
+
+function dotest() {
+    var answer = document.getElementById("answer");
+    answer.innerText = "sending";
+    var okfn = function(evt) {
+        answer.innerText = evt.target.responseText;
+    };
+    var urlbase = "/calpoint";
+    var index = 1;
+    var part = "low";
+    var setting = 0.125;
+    var url = [urlbase, index, part, setting].join("/");
+    sendAjaxGet(url, okfn);
+}
+
+function sendCalpoint(index, part, setting, okfn, errfn) {
+    sendAjaxGet(url, okfn, errfn);
+}
+
+function sendAjaxGet(url, okfn, errfn) {
+    if (!errfn) errfn = ajaxErrFn;
+    var loadedfn = function loadedfn(evt) {
+        if (evt.target.status !== 0 && evt.target.status !== 200) {
+            errfn(evt);
+        } else okfn(evt);
+    };
+    var req = new XMLHttpRequest();
+    req.responseType = "text";
+    req.open("GET", url);
+    req.addEventListener("load", loadedfn);
+    req.addEventListener("error", errfn);
+    req.addEventListener("abort", errfn);
+    req.send();
+}
+
+function ajaxErrFn(evt) {
+    console.log("ajax error", evt.target);
+    var answer = document.getElementById("answer");
+    answer.innerText = "Trouble contacting server";
+}
+
+   </script>
+</head>
+<body>
+<h1>Test</h1>
+<a href="/"><i>Back to Command Central</i></a><p>
+
+Here it is.
+<p>
+<input type="button" value="Test" onclick="dotest()">
+
+<div id="answer">
+   test result
+</div>
+
+</body></html>

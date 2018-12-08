@@ -1,0 +1,82 @@
+https://somesquares.org/blog/2017/10/Raspberry-Pi-router/
+
+sudo apt-get install hostapd
+edit /etc/hostapd/hostapd.conf
+edit /etc/default/hostapd
+
+sudo apt-get install dnsmasq
+edit /etc/dnsmasq.conf
+
+systenctl enable hostapd
+systemctl enable dnsmasq
+
+edit /etc/wpa_supplicant/wpa_supplicant.conf -- comment out the network RickB
+https://superuser.com/questions/1183669/configuring-linux-as-a-wireless-router-configure-wireless-card-as-ap-on-separat
+sudo ip addr add 192.168.17.1/24 dev wlan0 
+
+edited wpa_supplicant.conf
+(seems to have enabled publication of the vikingbot net, but can't connect)
+Starting dnsmasq manually works!
+
+---
+Revisiting the above
+In particular, don't bother with ip addr add
+
+
+* sudo apt-get install hostapd
+
+*edit /etc/hostapd/hostapd.conf
+interface=wlan0
+driver=nl80211
+beacon_int=100
+hw_mode=g
+ieee80211n=1
+wme_enabled=1
+country_code=US
+ssid=vikingbot
+wpa_passphrase=main400hs
+ieee80211d=1
+channel=3
+wpa=2
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+auth_algs=1
+macaddr_acl=0
+ignore_broadcast_ssid=0
+#logger_syslog=-1
+#logger_syslog_level=2
+#logger_stdout=-1
+#logger_stdout_level=2
+
+* edit /etc/default/hostapd
+DAEMON_CONF="/etc/hostapd/hostapd.conf"
+
+* sudo apt-get install dnsmasq
+
+* edit /etc/dnsmasq.conf
+interface=wlan0
+domain-needed
+bogus-priv
+dhcp-range=192.168.17.50,192.168.17.250,12h
+
+* edit /etc/wpa_supplicant/wpa_supplicant.conf
+remove existing networks (RickB, WMS-STEM) and add
+network={
+	ssid="vikingbot"
+	psk="main400hs"
+	key_mgmt=WPA-PSK
+}
+
+* edit /etc/dhcpcd.conf
+interface wlan0
+static ip_address=192.168.17.1
+static routers=192.168.17.1
+
+
+* sudo systemctl enable hostapd
+* sudo systemctl enable dnsmasq
+
+---TODO:
+IWBNI the pi served up dns for its own name so browsers could use http://pi instead of http://192.168.17.1
+Assigned leases are in /var/lib/misc/dnsmasq.leases
