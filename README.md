@@ -10,7 +10,7 @@ toy RC car (not working) to be used as a mobile base.
 
 The original electronics were abandoned, to be replaced
 by a Raspberry Pi, a PWM expander (PCA9685), and a dual
-H-bridge motor controller (L298).  The motors, gear train, 
+H-bridge motor controller (L298).  The original motors, gear train, 
 chassis, and wheels were all good for the purpose.
 
 The Pi was set up as its own WiFi hotspot and mini web 
@@ -21,7 +21,7 @@ could concurrently control aspects of robot behavior.
 The Pi served up static HTTP pages, and responded to AJAX 
 requests from the browser.  One web page controlled the
 motor speed and steering; another controlled the expressive
-eyebrows on a hand-drawn face and blinked LED eyes.  
+eyebrows on a hand-drawn face, and blinked LED eyes.  
 
 Additional pages did adminstrative functions like servo
 calibration or command a system shutdown.
@@ -64,8 +64,19 @@ index.html offers dispatch to calibration (cal.html), face
 control (face.html), motor control (motors.html), and admin
 (admin.html).
 
+## myip
+
+Not generally needed now that the Pi can host its own WiFi.
+When the Pi is a guest in another hotspot, its IP address gets
+dynamically assigned by the router (DHCP) and there's no
+way to find out what it is.  The myip code gives a way for
+the Pi to rendezvous with a user's machine also on the same
+WiFi submet.  The Pi runs code in myip/register.py and a
+server somewhere on the internet runs the code in
+myip/myip.py.
+
 ## TBS
 
 Bot pics, screen shots of the web pages, better commenting,
-explaining the hotspot, discursive bloggery, etc.
+how to set up the hotspot, links to discursive bloggery, etc.
 

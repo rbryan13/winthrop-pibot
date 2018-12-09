@@ -74,7 +74,7 @@ def writeData(data):
         outf.write(j)
 
 def confirmToken(token, parts):
-    secret = b"redsox"
+    secret = b"secret-token"
     m = hashlib.md5()
     m.update(secret)
     for part in parts:

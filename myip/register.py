@@ -13,8 +13,8 @@ def register():
     ips = getMyIpAddresses()
     ips = ",".join(ips)
     token = generateToken(["set", nodename, ips])
-    # https://faunbar.com/mimcal/myip/set/foobar/?ip=123.45.67.1&token=4ae98c43c976a794
-    url = "https://faunbar.com/mimcal/myip/set/{0}/?ip={1}&token={2}".format(nodename, ips, token)
+    # https://host/myip/set/foobar/?ip=123.45.67.1&token=4ae98c43c976a794
+    url = "https://host/myip/set/{0}/?ip={1}&token={2}".format(nodename, ips, token)
     r = requests.get(url)
     if r.status_code == 200:
         print("successfully registered as {0} at {1}".format(nodename, ips))
@@ -41,7 +41,7 @@ def getMyIpAddresses():
     return list(ip for ip in (extractIP(line) for line in lines) if ip)
 
 def generateToken(parts):
-    secret = b'redsox'
+    secret = b'secret-token'
     m = hashlib.md5()
     m.update(secret)
     for part in parts:
