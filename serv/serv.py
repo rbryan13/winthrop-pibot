@@ -199,7 +199,8 @@ def serve(port=8013):
     try:
         with open("/home/rlb/serv.log", "a") as stdout, redirect_stdout(stdout), redirect_stderr(stdout):
             serv1(port)
-    except (SystemExit, OSError):
+    except (SystemExit, OSError) as e:
+        print(e)
         print("Exiting the service")
 
 def serv1(port):

@@ -1,10 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 
 def deploy():
-    src = "~/school/pyserv/serv"
-    dest = "pi:py/"
+    src = "/mnt/transport/school/winthrop-pibot/serv/"
+    #src = "~/school/pyserv/serv"
+    dest = "pi:py/serv"
     #os.system("scp -r {0} {1}".format(src, dest))
     os.system("rsync -a {0} {1}".format(src, dest))
 
