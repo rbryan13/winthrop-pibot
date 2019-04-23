@@ -11,6 +11,10 @@ html, body {
 #errors {
   color: red;
 }
+.number {
+    width: 14em;
+    border: 1px solid black;
+}
 
 #arena {
     position: relative;
@@ -66,6 +70,7 @@ function maybeSendMotion(fx, fy) {
 <h1>Basic control of cart</h1>
 <a href="/"><i>Back to Command Central</i></a><p>
 <div id="errors""></div>
+<div id="numbers"></div>
 
 <div id="arena" onmousedown="arenaClick(event)" ontouchstart="arenaTouch(event)"></div>
 

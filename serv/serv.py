@@ -32,6 +32,7 @@ class PyServ(SimpleHTTPRequestHandler):
             "calpoint": self.handle_calpoint,
             "set":      self.handle_set,
             "phonehome": self.handle_phonehome,
+            "calleros": self.handle_callerOs,
             "direction": self.handle_direction,
             "motor":    self.handle_motor,
             "stop":     self.handle_stop,
@@ -120,6 +121,10 @@ class PyServ(SimpleHTTPRequestHandler):
     def handle_phonehome(self, parts, query):
         log.debug("phonehome {0}".format(unquote(query)))
         self.respondOK()
+
+    def handle_callerOs(self, parts, query):
+        agent = self.headers["User-Agent"]
+        self.respondText("linux" if "Ubuntu" in agent else "windows")
 
     # handle ajax call like http://pi:8013/direction/steering/A
     def handle_direction(self, parts, query):

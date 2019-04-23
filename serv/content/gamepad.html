@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+   <title>Gamepad inputs</title>
+
+   <style>
+html, body {
+    height: 100%;
+}
+#errors {
+  color: red;
+}
+   </style>
+   <script>
+
+function round3(x) { return Math.round(1000*x) / 1000; }
+
+function readInputs(state) {
+    var gamepad = navigator.getGamepads()[0];
+    if (!gamepad) return;
+    var axes = gamepad.axes;
+    var buttons = gamepad.buttons;
+    var naxes = axes.length;
+    var nbuttons = buttons.length;
+    var nrows = Math.max(naxes, nbuttons);
+
+    var stuff = [];
+    stuff.push("<table>");
+    stuff.push("<tr><td></td><td>Axes</td><td>Buttons</td><tr>");
+    for (var i = 0; i < nrows; i++) {
+	stuff.push("<tr>");
+	stuff.push("<td>", i, "</td>");
+	if (i < naxes) {
+	    var val = axes[i];
+	    stuff.push("<td>", round3(val), "</td>");
+	} else {
+	    stuff.push("<td>&nbsp;</td>");
+	}
+	if (i < nbuttons) {
+	    var val = buttons[i].pressed? 1 : 0;
+	    stuff.push("<td>", val, "</td>");
+	} else {
+	    stuff.push("<td>&nbsp;</td>");
+	}
+	stuff.push("</tr>");
+    }
+    stuff.push("</table>");
+    var numbers = document.getElementById("numbers");
+    numbers.innerHTML = stuff.join("");
+}
+
+window.onload = init;
+function init() {
+    var frame;
+    frame = function frame(msec) {
+	window.requestAnimationFrame(frame);
+        readInputs();
+    };
+    window.requestAnimationFrame(frame);
+}
+
+</script>
+</head>
+<body>
+
+<h1>Gamepad inputs</h1>
+<a href="/"><i>Back to Command Central</i></a><p>
+<div id="errors""></div>
+<div id="numbers"></div>
+
+</body></html>
