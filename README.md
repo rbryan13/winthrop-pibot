@@ -75,8 +75,16 @@ WiFi submet.  The Pi runs code in myip/register.py and a
 server somewhere on the internet runs the code in
 myip/myip.py.
 
+## Setting up the hostspot
+
+Just do what the reference says: https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md
+
+You will need to identify your net (ssid) and passphrase.
+
+You may want to adapt your subnet address (not necessarily their 192.168.**4**.x)
+and dhcp-range of addresses to hand out (not necessarily starting at 2).
+
 ## TBS
 
 Bot pics, screen shots of the web pages, better commenting,
-how to set up the hotspot, links to discursive bloggery, etc.
-
+links to discursive bloggery, etc.
