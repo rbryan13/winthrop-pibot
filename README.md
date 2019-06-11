@@ -88,4 +88,3 @@ and dhcp-range of addresses to hand out (not necessarily starting at 2).
 
 Bot pics, screen shots of the web pages, better commenting,
 links to discursive bloggery, etc.
-
