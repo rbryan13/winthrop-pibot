@@ -98,7 +98,7 @@ class PyServ(SimpleHTTPRequestHandler):
 
     # handle ajax call like http://pi:8013/set/1/0.125
     def handle_set(self, parts, query):
-        log.debug("set {0}".format(parts))
+        #log.debug("set {0}".format(parts))
         index, setting = parts
         index = int(index)
         setting = float(setting)
@@ -128,7 +128,7 @@ class PyServ(SimpleHTTPRequestHandler):
 
     # handle ajax call like http://pi:8013/direction/steering/A
     def handle_direction(self, parts, query):
-        log.debug("direction {0}".format(parts))
+        #log.debug("direction {0}".format(parts))
         motorId, dir = parts
         if dir not in ("A", "B"):
             raise ValueError("Unrecognized motor direction (should be A or B)")
@@ -139,7 +139,7 @@ class PyServ(SimpleHTTPRequestHandler):
     # where parts are DIR/CHAN/VAL
     # where dir is A or B; chan is servo channel, and val is PWM
     def handle_motor(self, parts, query):
-        log.debug("motor {0}".format(parts))
+        #log.debug("motor {0}".format(parts))
         steeringParts, throttleParts = parts
         steeringDir, steeringChan, steeringPWM = steeringParts.split("-")
         throttleDir, throttleChan, throttlePWM = throttleParts.split("-")

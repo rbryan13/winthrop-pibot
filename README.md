@@ -13,7 +13,7 @@ by a Raspberry Pi, a PWM expander (PCA9685), and a dual
 H-bridge motor controller (L298).  The original motors, gear train, 
 chassis, and wheels were all good for the purpose.
 
-The Pi was set up as its own WiFi hotspot and mini web 
+The Pi was set up as its own WiFi host and mini web 
 server.  Controller was a web browser running on a phone
 or tablet, connected to the pibot's WiFi.  Several people
 could concurrently control aspects of robot behavior.
@@ -67,16 +67,25 @@ control (face.html), motor control (motors.html), and admin
 ## myip
 
 Not generally needed now that the Pi can host its own WiFi.
-When the Pi is a guest in another hotspot, its IP address gets
+When the Pi is a guest in another net, its IP address gets
 dynamically assigned by the router (DHCP) and there's no
 way to find out what it is.  The myip code gives a way for
 the Pi to rendezvous with a user's machine also on the same
-WiFi submet.  The Pi runs code in myip/register.py and a
+WiFi subnet.  The Pi runs code in myip/register.py and a
 server somewhere on the internet runs the code in
 myip/myip.py.
+
+## Setting up the hostspot
+
+Just do what the reference says: https://www.raspberrypi.org/documentation/configuration/wireless/access-point.md
+
+You will need to identify your net (ssid) and passphrase.
+
+You may want to adapt your subnet address (not necessarily their 192.168.**4**.x)
+and dhcp-range of addresses to hand out (not necessarily starting at 2).
 
 ## TBS
 
 Bot pics, screen shots of the web pages, better commenting,
-how to set up the hotspot, links to discursive bloggery, etc.
+links to discursive bloggery, etc.
 
