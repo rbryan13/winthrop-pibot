@@ -20,9 +20,20 @@ from urllib.parse import unquote
 # pi:8013/calpoint/1/max/0.772
 # pi:8014/calpoint/13/set/0.5232
 
-logging.basicConfig(filename='/home/rlb/serv.log',level=logging.DEBUG)
+logging.basicConfig(filename='/home/pi/serv.log',level=logging.DEBUG)
 log = logging.getLogger(__name__)
 log.debug('-' * 40)
+
+class HTTPBotServer(HTTPServer):
+    def __init__(self, *args, **kwargs):
+        self.actions = None
+        super().__init__(*args, **kwargs)
+
+    def service_actions(self):
+        if self.actions:
+            # Define that to call cv2.waitKey(1)
+            self.actions()
+
 
 class PyServ(SimpleHTTPRequestHandler):
     # request, client_address, server
@@ -177,7 +188,7 @@ class PyServ(SimpleHTTPRequestHandler):
         print(msg, file=sys.__stdout__)
         sys.stdout.flush()
         #os.execl(sys.executable, os.path.abspath(__file__), *sys.argv) 
-        os.execl("/home/rlb/doserv", "/home/rlb/doserv")
+        os.execl("/home/pi/doserv", "/home/pi/doserv")
 
     def handle_fullrestart(self, parts, query):
         msg = "Restarting down system by request (takes a while)"
@@ -185,7 +196,7 @@ class PyServ(SimpleHTTPRequestHandler):
         log.debug(msg)
         print(msg, file=sys.__stdout__)
         sys.stdout.flush()
-        os.system("/home/rlb/doshutdown -r")
+        os.system("/home/pi/doshutdown -r")
 
     def handle_fullshutdown(self, parts, query):
         with open(os.path.join(scriptDir, "content/shuttingDown.html"), "r") as inf:
@@ -195,14 +206,14 @@ class PyServ(SimpleHTTPRequestHandler):
         log.debug(msg)
         print(msg, file=sys.__stdout__)
         sys.stdout.flush()
-        os.system("/home/rlb/doshutdown -h")
+        os.system("/home/pi/doshutdown -h")
 
 # ****************************************
 
 def serve(port=8013):
     print("Serving on port {0} in {1}".format(port, os.getcwd()))
     try:
-        with open("/home/rlb/serv.log", "a") as stdout, redirect_stdout(stdout), redirect_stderr(stdout):
+        with open("/home/pi/serv.log", "a") as stdout, redirect_stdout(stdout), redirect_stderr(stdout):
             serv1(port)
     except (SystemExit, OSError) as e:
         print(e)
@@ -228,7 +239,7 @@ def serv1(port):
     motors.defineMotor("steering", (17, 18), servo, 0)
 
     addr = ('', port)
-    server = HTTPServer(addr, PyServ)
+    server = HTTPBotServer(addr, PyServ)
     server.servo = servo
     server.motors = motors
     os.chdir("content")
