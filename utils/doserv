@@ -1,5 +1,5 @@
 #!/bin/sh
-cd /home/rlb/py/
+cd /home/pi/py/
 . bin/activate
-cd serv
-/home/rlb/py/serv/serv.py
+cd winthrop-pibot/serv
+/home/pi/py/winthrop-pibot/serv/serv.py

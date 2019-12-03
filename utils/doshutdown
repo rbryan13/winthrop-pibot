@@ -1,2 +1,7 @@
 #!/bin/sh
-/sbin/shutdown $1 now
+# To set up this file:
+# sudo chown root:root doshutdown
+# sudo chmod +x doshutdown
+# sudo chmod u+s doshutdown
+# That is, owned by root, executable, setuid
+sudo /sbin/shutdown $1 now
