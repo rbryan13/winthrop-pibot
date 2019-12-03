@@ -39,14 +39,15 @@ class PyServ(SimpleHTTPRequestHandler):
     # request, client_address, server
     def __init__(self, *args, **kwargs):
         self.handlers = {
-            "caldata":  self.handle_caldata,
-            "calpoint": self.handle_calpoint,
-            "set":      self.handle_set,
+            "caldata":   self.handle_caldata,
+            "calpoint":  self.handle_calpoint,
+            "set":       self.handle_set,
             "phonehome": self.handle_phonehome,
-            "calleros": self.handle_callerOs,
+            "auto":      self.handle_auto,
+            "calleros":  self.handle_callerOs,
             "direction": self.handle_direction,
-            "motor":    self.handle_motor,
-            "stop":     self.handle_stop,
+            "motor":     self.handle_motor,
+            "stop":      self.handle_stop,
             "servicequit":    self.handle_servicequit,
             "servicerestart": self.handle_servicerestart,
             "fullrestart":    self.handle_fullrestart,
@@ -68,7 +69,7 @@ class PyServ(SimpleHTTPRequestHandler):
                     handler(parts, query)
                     handled = True
                 except SystemExit:
-                    pass
+                    raise
                 except Exception as e:
                     log.debug("Exception handling {0}: {1}".format(self.path, e))
                     log.debug(traceback.format_exc())
@@ -131,6 +132,12 @@ class PyServ(SimpleHTTPRequestHandler):
 
     def handle_phonehome(self, parts, query):
         log.debug("phonehome {0}".format(unquote(query)))
+        self.respondOK()
+
+    def handle_auto(self, parts, query):
+        on = len(parts) > 0 and parts[0] and parts[0] != "0"
+        log.debug("auto {0} {1}".format(parts, on))
+        # ---actually implement auto
         self.respondOK()
 
     def handle_callerOs(self, parts, query):

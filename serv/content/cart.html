@@ -8,12 +8,15 @@
 html, body {
     height: 100%;
 }
-#errors {
+.errors {
   color: red;
 }
 .number {
     width: 14em;
     border: 1px solid black;
+}
+.hilite-auto {
+    background: red;
 }
 
 #arena {
@@ -63,13 +66,32 @@ function maybeSendMotion(fx, fy) {
     queueMotion();
 }
 
+
+function toggleAuto() {
+    var button = document.getElementById("auto");
+    var url, okfn;
+    if (button.classList.contains("hilite-auto")) {
+        // turn off auto
+        url = "/auto/0";
+        okfn = function() { button.classList.remove("hilite-auto"); };
+    } else {
+        // turn on auto
+        url = "/auto/1";
+        okfn = function() { button.classList.add("hilite-auto"); };
+    }
+    sendAjaxGet(url, okfn);
+}
+
    </script>
 </head>
 <body>
 
 <h1>Basic control of cart</h1>
-<a href="/"><i>Back to Command Central</i></a><p>
-<div id="errors""></div>
+<a href="/"><i>Back to Command Central</i></a>
+&nbsp;&nbsp;
+<input type="button" id="auto" value="Auto" onclick="toggleAuto();">
+<p>
+<div id="errors" class="errors"></div>
 <div id="numbers"></div>
 
 <div id="arena" onmousedown="arenaClick(event)" ontouchstart="arenaTouch(event)"></div>
