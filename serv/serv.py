@@ -15,6 +15,8 @@ import threading
 import traceback
 from urllib.parse import unquote
 
+from autodrive import Autodriver
+
 # urls look like:
 # pi:8013/calpoint/1/min/0.125
 # pi:8013/calpoint/1/max/0.772
@@ -24,20 +26,9 @@ logging.basicConfig(filename='/home/pi/serv.log',level=logging.DEBUG)
 log = logging.getLogger(__name__)
 log.debug('-' * 40)
 
-class HTTPBotServer(HTTPServer):
-    def __init__(self, *args, **kwargs):
-        self.actions = None
-        super().__init__(*args, **kwargs)
-
-    def service_actions(self):
-        if self.actions:
-            # Define that to call cv2.waitKey(1)
-            self.actions()
-
 
 class PyServ(SimpleHTTPRequestHandler):
-    # request, client_address, server
-    def __init__(self, *args, **kwargs):
+    def __init__(self, request, client_address, server):
         self.handlers = {
             "caldata":   self.handle_caldata,
             "calpoint":  self.handle_calpoint,
@@ -53,7 +44,7 @@ class PyServ(SimpleHTTPRequestHandler):
             "fullrestart":    self.handle_fullrestart,
             "fullshutdown":   self.handle_fullshutdown,
             }
-        super().__init__(*args, **kwargs)
+        super().__init__(request, client_address, server)
 
     # googling suggests don't bother with HEAD
     def do_GET(self):
@@ -136,8 +127,17 @@ class PyServ(SimpleHTTPRequestHandler):
 
     def handle_auto(self, parts, query):
         on = len(parts) > 0 and parts[0] and parts[0] != "0"
-        log.debug("auto {0} {1}".format(parts, on))
-        # ---actually implement auto
+        # log.debug("auto {0} {1}".format(parts, on))
+        if on:
+            if self.server.autodriver:
+                # Missed a previous stop somehow?
+                self.server.autodriver.stop()
+            self.server.autodriver = Autodriver(self.server)
+            self.server.autodriver.start()
+        else:
+            if self.server.autodriver:
+                self.server.autodriver.stop()
+                self.server.autodriver = None
         self.respondOK()
 
     def handle_callerOs(self, parts, query):
@@ -154,7 +154,7 @@ class PyServ(SimpleHTTPRequestHandler):
         self.respondOK()
 
     # handle ajax call like /motor/steeringparts/throttleparts
-    # where parts are DIR/CHAN/VAL
+    # where parts are DIR-CHAN-VAL
     # where dir is A or B; chan is servo channel, and val is PWM
     def handle_motor(self, parts, query):
         #log.debug("motor {0}".format(parts))
@@ -246,9 +246,10 @@ def serv1(port):
     motors.defineMotor("steering", (17, 18), servo, 0)
 
     addr = ('', port)
-    server = HTTPBotServer(addr, PyServ)
+    server = HTTPServer(addr, PyServ)
     server.servo = servo
     server.motors = motors
+    server.autodriver = None
     os.chdir("content")
     log.debug("Serving on port {0} in {1}".format(port, os.getcwd()))
     server.serve_forever()
