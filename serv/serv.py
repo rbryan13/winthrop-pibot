@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import threading
+import time
 import traceback
 from urllib.parse import unquote
 
@@ -153,18 +154,16 @@ class PyServ(SimpleHTTPRequestHandler):
         self.server.motors.setDirection(motorId, dir)
         self.respondOK()
 
-    # handle ajax call like /motor/steeringparts/throttleparts
-    # where parts are DIR-CHAN-VAL
-    # where dir is A or B; chan is servo channel, and val is PWM
+    # handle ajax call like /motor?0=0.12&1=-0.77
+    # where each query part is chan=val,
+    # where chan is servo channel and val is signed PWM
     def handle_motor(self, parts, query):
         #log.debug("motor {0}".format(parts))
-        steeringParts, throttleParts = parts
-        steeringDir, steeringChan, steeringPWM = steeringParts.split("-")
-        throttleDir, throttleChan, throttlePWM = throttleParts.split("-")
-        self.server.motors.setDirection("steering", steeringDir)
-        self.server.motors.setDirection("throttle", throttleDir)
-        self.server.servo.setChannelPWM(int(steeringChan), float(steeringPWM))
-        self.server.servo.setChannelPWM(int(throttleChan), float(throttlePWM))
+        qparts = query.split('&')
+        for qpart in qparts:
+            id, val = qpart.split('=')
+            val = float(val)
+            self.server.motors.setSignedPWM(id, val)
         self.respondOK()
 
     # handle ajax call like http://pi:8013/stop
@@ -242,8 +241,20 @@ def serv1(port):
         from standins import StandinMotorController, StandinMotorDefinition
         motors = StandinMotorController()
 
-    motors.defineMotor("throttle", (14, 15), servo, 1)
-    motors.defineMotor("steering", (17, 18), servo, 0)
+    motors.defineMotor("right", (14, 15), servo, 0)
+    motors.defineMotor("left", (17, 18), servo, 1)
+
+    motors.setSignedPWM("left", 0)
+    motors.setSignedPWM("right", 0)
+    time.sleep(0.1)
+    motors.setDirection("left", "B")
+    time.sleep(0.1)
+    motors.setDirection("left", "A")
+    time.sleep(0.1)
+    motors.setDirection("right", "B")
+    time.sleep(0.1)
+    motors.setDirection("right", "A")
+    time.sleep(0.1)
 
     addr = ('', port)
     server = HTTPServer(addr, PyServ)

@@ -12,7 +12,11 @@
 # https://www.arrow.com/en/research-and-events/articles/raspberry-pi-gpio
 #
 
+import logging
+
 import RPi.GPIO as GPIO
+
+log = logging.getLogger(__name__)
 
 class MotorController(object):
     def __init__(self):
@@ -25,7 +29,15 @@ class MotorController(object):
         GPIO.setup(pins, GPIO.OUT)
         GPIO.output(pins, GPIO.LOW)
 
+    def setSignedPWM(self, motorId, signedPWM):
+        log.debug("setSignedPWM {0} {1}".format(motorId, signedPWM))
+        if signedPWM != 0:
+            self.setDirection(motorId, "A" if signedPWM >= 0 else "B")
+        data = self.motorData.get(motorId)
+        data.servoController.setChannelPWM(data.servoChannel, abs(signedPWM))
+
     def setDirection(self, motorId, dir):
+        log.debug("setDirection: motorId {0} dir {1}".format(motorId, dir))
         data = self.motorData.get(motorId)
         if not data:
             raise KeyError("no motor defined with id '{0}'".format(motorId))

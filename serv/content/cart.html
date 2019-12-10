@@ -37,31 +37,34 @@ function maybeSendMotion(fx, fy) {
     // fx, fy are fractions (0..1) of the way across the arena.
     // First, translate each to -1..+1
     // then combine them the motor power.
-    var signed = function signed(motor, f) {
+    var signed = function signed(axis, f) {
         // dead zone in the middle for each direction
-        if (f < deadZone[motor].low) {
-            return -lerp(f, deadZone[motor].low, 0, 0, fullThrottlePWM);
-        } else if (f > deadZone[motor].high) {
-	    return lerp(f, deadZone[motor].high, 1, 0, fullThrottlePWM);
+        if (f < deadZone[axis].low) {
+            return -lerp(f, deadZone[axis].low, 0, 0, fullThrottlePWM);
+        } else if (f > deadZone[axis].high) {
+	    return lerp(f, deadZone[axis].high, 1, 0, fullThrottlePWM);
         } else {
 	    return 0.0;
         }
     };
-    //---throttle and steering are misnomers for left-right motors
+    var clip = function clip(x) { return Math.max(-1, Math.min(1, x)); };
     var pthrottle = signed("throttle", fy);
-    var psteering = -signed("steering", fx);
+    var psteering = signed("steering", fx);
     // Add the steering to the right, subtract from left
     var pleft = pthrottle - psteering;
     var pright = pthrottle + psteering;
     pleft = round3(pleft);
     pright = round3(pright);
-    pright = -pright;	// fix wiring error
+    if (Math.abs(pleft) < 0.01) pleft = 0;
+    if (Math.abs(pright) < 0.01) pright = 0;
+
+    //---explain this confusion! Compare with
+    // the simple logic in wheelcheck.html
+    pleft = -pleft;
+    pright = -pright;
     console.log(`fx ${fx} fy ${fy} pleft ${pleft} pright ${pright}`);
-    // Convert back to sign-magnitude
-    desiredSetting["steering"].direction = (pleft < 0)? "A" : "B";
-    desiredSetting["steering"].speed = Math.min(1.0, Math.abs(pleft));
-    desiredSetting["throttle"].direction = (pright < 0)? "A" : "B";
-    desiredSetting["throttle"].speed = Math.min(1.0, Math.abs(pright));
+    desiredSetting.left = clip(pleft);
+    desiredSetting.right = clip(pright);
 
     queueMotion();
 }

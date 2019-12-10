@@ -29,6 +29,20 @@ function rcontains(seq, item) {
     return false;
 }
 
+// Not calling it "filter" because I get confused about
+// whether it's filter-out or keep.
+function rkeepif(seq, fn) {
+    var i4, n = seq.length;
+    var res = [], val;
+    for (i4 = 0; i4 < n; i4++) {
+        val = seq[i4];
+        if (fn(val)) {
+            res.push(val)
+        }
+    }
+    return res;
+}
+
 // ****************************************
 
 var Dragger =  {

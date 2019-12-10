@@ -86,19 +86,15 @@ function arenaTouch(evt) {
     doDrag(evt, onFunctions);
 }
 
-var servoChannels = {
-    throttle: 0,
-    steering: 1,
-};
 var deadZone = { steering: {low: 0.4, high: 0.6}, throttle: {low: 0.4, high: 0.6}};
 
 var desiredSetting = {
-    steering: {direction: null, speed: 0},
-    throttle: {direction: null, speed: 0}
+    left: 0,
+    right: 0,
 };
 var recentSetting = {
-    steering: {direction: null, speed: 0},
-    throttle: {direction: null, speed: 0},
+    left: 0,
+    right: 0,
     inprogress: false,
 };
 
@@ -119,18 +115,10 @@ function queueMotion() {
         //phoneHome("in progress");
         return;
     }
-    var changed = false;
-    rforeach(["steering", "throttle"], function(motor) {
-        rforeach(["direction", "speed"], function(axis) {
-            if (desiredSetting[motor][axis] != recentSetting[motor][axis]) {
-                changed = true;
-            } else {
-                //var msg = "n/c " + motor+"."+axis + " " + desiredSetting[motor][axis] + " vs " + recentSetting[motor][axis];
-                //phoneHome(msg);
-            }
-        });
+    var changed = rkeepif(["left", "right"], function(motor) {
+        return (desiredSetting[motor] != recentSetting[motor]);
     });
-    if (!changed) {
+    if (changed.length == 0) {
         // ---This could keep track of when the last request went out,
         // and send out even a dup if it has been long enough (like 1.0 sec?)
 
@@ -141,22 +129,12 @@ function queueMotion() {
         //phoneHome("yay change");
     }
 
-    // direction (A or B)
-    // channel (0 or 1, probably)
-    // PWM value (0.0 to 1.0)
-    // One triple for steering, then one for throttle
-    var urlparts = function urlparts(motor) {
-        var parts = [desiredSetting[motor].direction, servoChannels[motor], desiredSetting[motor].speed];
-        return parts.join("-");
-    };
-
-    var steeringParts = urlparts("steering");
-    var throttleParts = urlparts("throttle");
-    var url = ["/motor", steeringParts, throttleParts].join("/");
-    rforeach(["steering", "throttle"], function(motor) {
-        rforeach(["direction", "speed"], function(axis) {
-            recentSetting[motor][axis] = desiredSetting[motor][axis];
-        });
+    var urlparts = rmap(changed, function(motor) {
+        return motor + '=' + desiredSetting[motor];
+    });
+    var url = "/motor" + '?' + urlparts.join('&');
+    rforeach(changed, function(motor) {
+        recentSetting[motor] = desiredSetting[motor];
     });
 
     recentSetting.inprogress = true;
@@ -273,27 +251,23 @@ function updateRobotMotors(state) {
     var joy = state.joy;
     if (!joy.present) return;
     var throttle = joy.leftY;
-    throttle = -throttle;	//---explain
+    //throttle = -throttle;	//---explain
     // push to left makes turning negative
     var turning = joy.rightX;
     var pleft = throttle + turning;
     var pright = throttle - turning;
     pleft = clip(round3(pleft));
     pright = clip(round3(pright));
-    pright = -pright; // fix wiring error
     //console.log(`thr ${round3(joy.leftY)} turn ${round3(joy.rightX)} pleft ${pleft} pright ${pright}`);
     showData([["thr", round3(throttle)],
               ["turn", round3(turning)],
               ["pleft", pleft],
               ["pright", pright]
              ]);
-    // Convert back to sign-magnitude
-    //var ch1 = "throttle", ch2="steering";
-    var ch1 = "steering", ch2="throttle";
-    desiredSetting[ch1].direction = (pleft < 0)? "A" : "B";
-    desiredSetting[ch1].speed = Math.min(1.0, Math.abs(pleft));
-    desiredSetting[ch2].direction = (pright < 0)? "A" : "B";
-    desiredSetting[ch2].speed = Math.min(1.0, Math.abs(pright));
+    if (Math.abs(pleft) < 0.1) pleft = 0;
+    if (Math.abs(pright) < 0.1) pright = 0;
+    desiredSetting.left = pleft;
+    desiredSetting.right = pright;
 
     queueMotion();
 }
